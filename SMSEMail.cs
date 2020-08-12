@@ -12,7 +12,7 @@ using MailKit;
 using MimeKit;
 using MailKit.Net.Smtp;
 
-namespace SMSEMail
+namespace SMSNotification
 {
     /// <summary>
     /// This class handles the creation and sending of E-Mails using either the SQL Server "sp_send_dbmail" system stored procedure
