@@ -73,14 +73,19 @@ namespace SMSEMailNameSpace
         /// <param name="bbcourseid"></param>
         /// <param name="newstudentaccountpassword"></param>
         /// <param name="ccuserid"></param>
-        public async Task CreateAndSendEMail(Platform platform, string sqlmailprofilename, int emailtypeid, int userid, bool includealternateaddress, bool logemail, int? courseid = null, string newstudentaccountpassword = null, int? ccuserid = null)
+        public async Task CreateAndSendEMail(Platform platform, int emailtypeid, int userid, bool includealternateaddress, bool logemail, string sqlmailprofilename = null, int? courseid = null, string newstudentaccountpassword = null, int? ccuserid = null)
         {
             try
             {
                 if (string.IsNullOrEmpty(this.ConnectionString) || string.IsNullOrEmpty(this.FromAddress) || string.IsNullOrEmpty(this.SMTPServerNameOrIP) || string.IsNullOrEmpty(this.SMTPPortNumber))
                 {
-                    Exception missingParameterException = new Exception(@"Cannot create E-Mail ... one or more invalid parameters passed to constructor.");
+                    Exception missingParameterException = new Exception(@"Cannot create E-Mail ... one or more invalid parameters.");
                     throw missingParameterException;
+                }
+                else if (platform == Platform.SQLServer && (sqlmailprofilename == null || sqlmailprofilename == string.Empty))
+                {
+                    Exception noProfileNameException = new Exception(@"Cannot create E-Mail ... SQL database mail requires a profile name.");
+                    throw noProfileNameException;
                 }
 
                 bool _buildEMailListSuccess = await BuildEMailListAsync(userid, emailtypeid, includealternateaddress, courseid, newstudentaccountpassword, ccuserid);
