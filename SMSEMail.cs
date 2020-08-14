@@ -26,7 +26,7 @@ namespace SMSEMailNameSpace
             DotNetMail
         }
 
-        List<EMailData> EMailList = null;
+        List<EMailData> EMailList = new List<EMailData>();
 
         // Properties.
 
@@ -47,12 +47,12 @@ namespace SMSEMailNameSpace
         /// This class handles the creation and sending of EMail messages using elements stored in the SMS database.  An E-Mail can be sent using SQL Server Database Mail functionality, or
         /// .NET funcitonality.
         /// </summary>
-        /// <param name="connectionstring"></param>
-        /// <param name="smtpservernameorip"></param>
-        /// <param name="smtpportnumber"></param>
-        /// <param name="fromaddress"></param>
-        /// <param name="smtpserverusername"></param>
-        /// <param name="smtpserverpword"></param>
+        /// <param name="connectionstring">The database connection string.</param>
+        /// <param name="smtpservernameorip">The SMTP Server Name or IP address.</param>
+        /// <param name="smtpportnumber">THe SMTP Port Number.</param>
+        /// <param name="fromaddress">The E-Mail "From" address.</param>
+        /// <param name="smtpserverusername">The User Name for the SMTP Server user acount (optional).</param>
+        /// <param name="smtpserverpword">The Password for the SMTP Server user acount (optional).</param>
         public SMSEMail(string connectionstring, string smtpservernameorip, string smtpportnumber, string fromaddress, string smtpserverusername = null, string smtpserverpword = null)
         {
             this.ConnectionString = connectionstring;
@@ -64,15 +64,18 @@ namespace SMSEMailNameSpace
         }
 
         /// <summary>
-        /// This method creates and sends an E-Mail.
+        /// 
         /// </summary>
-        /// <param name="platform"></param>
-        /// <param name="emailtypeid"></param>
-        /// <param name="userid"></param>
-        /// <param name="includealternateaddress"></param>
-        /// <param name="bbcourseid"></param>
-        /// <param name="newstudentaccountpassword"></param>
-        /// <param name="ccuserid"></param>
+        /// <param name="platform">Either SQL Server database mail or .NET.</param>
+        /// <param name="emailtypeid">The ID from the appropriate "EMail Type" record in the database.</param>
+        /// <param name="userid">The ID from the appropriate "User" record in the database.</param>
+        /// <param name="includealternateaddress">Send an E-Mail to the user's alternate E-Mail address ... id one exists.</param>
+        /// <param name="logemail">Whether or not to log the E-Mail in the database.</param>
+        /// <param name="sqlmailprofilename">The SQL Server Database Mail Profile Name (optional).</param>
+        /// <param name="courseid">The ID from the appropriate "Course" record in the database.</param>
+        /// <param name="newstudentaccountpassword">The password for a new student user account in Blackboard (optional).</param>
+        /// <param name="ccuserid">The database record ID of the "User" that will receive a copy of the E-Mail (optional).</param>
+        /// <returns></returns>
         public async Task CreateAndSendEMail(Platform platform, int emailtypeid, int userid, bool includealternateaddress, bool logemail, string sqlmailprofilename = null, int? courseid = null, string newstudentaccountpassword = null, int? ccuserid = null)
         {
             try
@@ -168,14 +171,14 @@ namespace SMSEMailNameSpace
                             primaryemaildata.RecipientAddress = rdr.GetString(0);
                             primaryemaildata.Subject_Text = rdr.GetString(2);
                             primaryemaildata.Body_Text = rdr.GetString(3);
-                            if (rdr.GetString(4) != null)
+                            if (! rdr.IsDBNull(4))
                             {
                                 primaryemaildata.CCAddress = rdr.GetString(4);
                             }
 
                             EMailList.Add(primaryemaildata);
 
-                            if (rdr.GetString(1) != null)
+                            if (! rdr.IsDBNull(1))
                             {
                                 // Create an EMail for the user's secondary address, and
                                 // add it to the "EMailList" list.
@@ -185,7 +188,7 @@ namespace SMSEMailNameSpace
                                 altemaildata.RecipientAddress = rdr.GetString(1);
                                 altemaildata.Subject_Text = rdr.GetString(2);
                                 altemaildata.Body_Text = rdr.GetString(3);
-                                if (rdr.GetString(4) != null)
+                                if (rdr.IsDBNull(4))
                                 {
                                     altemaildata.CCAddress = rdr.GetString(4);
                                 }
@@ -248,14 +251,18 @@ namespace SMSEMailNameSpace
         /// <param name="username"></param>
         /// <param name="password"></param>
         /// <returns></returns>
-        private bool SendDotNetEMail(EMailData emaildata, string username = null, string password = null)
+        private bool SendDotNetEMail(EMailData emaildata, string smtpusername = null, string smtppassword = null)
         {
             bool _retVal = false;
             try
             {
                 var mailMessage = new MimeMessage();
-                mailMessage.From.Add(new MailboxAddress("From Name", this.FromAddress));
-                mailMessage.To.Add(new MailboxAddress("To Name", emaildata.RecipientAddress));
+                mailMessage.From.Add(new MailboxAddress("", this.FromAddress));
+                mailMessage.To.Add(new MailboxAddress("", emaildata.RecipientAddress));
+                if (emaildata.CCAddress != null)
+                {
+                    mailMessage.Cc.Add(new MailboxAddress("", emaildata.CCAddress));
+                }
                 mailMessage.Subject = emaildata.Subject_Text;
                 mailMessage.Body = new TextPart(MimeKit.Text.TextFormat.Plain)
                 {
@@ -265,9 +272,9 @@ namespace SMSEMailNameSpace
                 using (var smtpClient = new SmtpClient())
                 {
                     smtpClient.Connect(this.SMTPServerNameOrIP, int.Parse(this.SMTPPortNumber));
-                    if (username != null && password != null)
+                    if (smtpusername != null && smtppassword != null)
                     {
-                        smtpClient.Authenticate(username, password);
+                        smtpClient.Authenticate(smtpusername, smtppassword);
                     }
                     smtpClient.Send(mailMessage);
                     smtpClient.Disconnect(true);
@@ -311,7 +318,6 @@ namespace SMSEMailNameSpace
                 throw ex;
             }
         }
-                
 
         /// <summary>
         /// Each instance of this class represents all of the data needed to create one E-Mail.
