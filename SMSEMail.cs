@@ -12,7 +12,7 @@ using MailKit;
 using MimeKit;
 using MailKit.Net.Smtp;
 
-namespace SMSEMailNameSpace
+namespace SMSEMail
 {
     /// <summary>
     /// This class handles the creation and sending of E-Mails using either the SQL Server "sp_send_dbmail" system stored procedure
@@ -64,19 +64,19 @@ namespace SMSEMailNameSpace
         }
 
         /// <summary>
-        /// 
+        /// This method creates and sends the E-Mail.
         /// </summary>
         /// <param name="platform">Either SQL Server database mail or .NET.</param>
         /// <param name="emailtypeid">The ID from the appropriate "EMail Type" record in the database.</param>
         /// <param name="userid">The ID from the appropriate "User" record in the database.</param>
         /// <param name="includealternateaddress">Send an E-Mail to the user's alternate E-Mail address ... id one exists.</param>
-        /// <param name="logemail">Whether or not to log the E-Mail in the database.</param>
         /// <param name="sqlmailprofilename">The SQL Server Database Mail Profile Name (optional).</param>
         /// <param name="courseid">The ID from the appropriate "Course" record in the database.</param>
         /// <param name="newstudentaccountpassword">The password for a new student user account in Blackboard (optional).</param>
         /// <param name="ccuserid">The database record ID of the "User" that will receive a copy of the E-Mail (optional).</param>
+        /// <param name="newenrollmentservicelogentrypk">The database record ID of the Enrollment Service Log Entry that is associated with the E-Mail (optional).</param>
         /// <returns></returns>
-        public async Task CreateAndSendEMail(Platform platform, int emailtypeid, int userid, bool includealternateaddress, bool logemail, string sqlmailprofilename = null, int? courseid = null, string newstudentaccountpassword = null, int? ccuserid = null)
+        public async Task CreateAndSendEMail(Platform platform, int emailtypeid, int userid, bool includealternateaddress, string sqlmailprofilename = null, int? courseid = null, string newstudentaccountpassword = null, int? ccuserid = null, int? newenrollmentservicelogentrypk = null)
         {
             try
             {
@@ -101,25 +101,11 @@ namespace SMSEMailNameSpace
                         {
                             if (platform == Platform.SQLServer)
                             {
-                                bool _sendSQLEMailSuccess = await SendSQLEMail(emailItem, sqlmailprofilename);
-                                if (_sendSQLEMailSuccess)
-                                {
-                                    if (logemail == true)
-                                    {
-                                        await LogEMail(userid, emailtypeid);
-                                    }
-                                }
+                                await SendSQLEMail(emailItem, sqlmailprofilename);
                             }
                             else
                             {
-                                bool _sendDotNetEMailSuccess = SendDotNetEMail(emailItem, this.SMTPServerUserName, this.SMTPServerPword);
-                                if (_sendDotNetEMailSuccess)
-                                {
-                                    if (logemail == true)
-                                    {
-                                        await LogEMail(userid, emailtypeid);
-                                    }
-                                }
+                                SendDotNetEMail(emailItem, this.SMTPServerUserName, this.SMTPServerPword);
                             }
                         }
                     }
@@ -132,7 +118,7 @@ namespace SMSEMailNameSpace
         }
 
         /// <summary>
-        /// 
+        /// This method creates a list of E-Mail recipients and required data for the E-Mail.
         /// </summary>
         /// <param name="userid"></param>
         /// <param name="emailtypeid"></param>
@@ -289,37 +275,6 @@ namespace SMSEMailNameSpace
         }
 
         /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="userid"></param>
-        /// <param name="emailtypeid"></param>
-        /// <returns></returns>
-        private async Task<bool> LogEMail(int userid, int emailtypeid)
-        {
-            bool _retVal = false;
-            try
-            {
-                using (SqlCommand command = new SqlCommand())
-                {
-                    command.Connection = new SqlConnection(this.ConnectionString);
-                    command.CommandType = CommandType.StoredProcedure;
-                    command.CommandText = "usp_InsertEMailLogEntry";
-                    command.Parameters.AddWithValue("@UserID", userid);
-                    command.Parameters.AddWithValue("@EMailTypeID", emailtypeid);
-                    command.Connection.Open();
-                    await command.ExecuteNonQueryAsync();
-                    command.Connection.Close();
-                }
-                _retVal = true;
-                return _retVal;
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-        }
-
-        /// <summary>
         /// Each instance of this class represents all of the data needed to create one E-Mail.
         /// </summary>
         internal class EMailData
@@ -331,7 +286,6 @@ namespace SMSEMailNameSpace
             internal string CCAddress { get; set; }
             internal string Subject_Text { get; set; }
             internal string Body_Text { get; set; }
-
         }
     }
 }
