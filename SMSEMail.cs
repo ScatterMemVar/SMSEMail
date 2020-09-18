@@ -74,9 +74,8 @@ namespace SMSEMailOperations
         /// <param name="courseid">The ID from the appropriate "Course" record in the database.</param>
         /// <param name="newstudentaccountpassword">The password for a new student user account in Blackboard (optional).</param>
         /// <param name="ccuserid">The database record ID of the "User" that will receive a copy of the E-Mail (optional).</param>
-        /// <param name="newenrollmentservicelogentrypk">The database record ID of the Enrollment Service Log Entry that is associated with the E-Mail (optional).</param>
         /// <returns></returns>
-        public async Task CreateAndSendEMail(Platform platform, int emailtypeid, int userid, bool includealternateaddress, string sqlmailprofilename = null, int? courseid = null, string newstudentaccountpassword = null, int? ccuserid = null, int? newenrollmentservicelogentrypk = null)
+        public async Task CreateAndSendEMail(Platform platform, int emailtypeid, int userid, bool includealternateaddress, string sqlmailprofilename = null, int? courseid = null, string newstudentaccountpassword = null, int? ccuserid = null)
         {
             try
             {
